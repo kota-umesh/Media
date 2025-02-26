@@ -3,6 +3,8 @@ import axios from "axios";
 import "./Login.css";
 import { useNavigate } from "react-router-dom";
 
+const backendUrl= process.env.REACT_APP_BACKEND_URL || "http://localhost:5000" ;
+
 const Login = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -12,7 +14,7 @@ const Login = () => {
       e.preventDefault();
   
       try {
-        const response = await axios.post("http://localhost:5000/api/login", {
+        const response = await axios.post(`${backendUrl}/api/login`, {
           email,
           password,
         });
