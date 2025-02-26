@@ -1,0 +1,40 @@
+.editor-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    margin: auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .editor-container.fullscreen {
+    max-width: 100%;
+    width: 90%;
+    height: 90vh;
+  }
+  
+  .editor-wrapper {
+    padding: 12px;
+    min-height: 150px;
+    text-align: left; /* Fix alignment */
+  }
+  
+  .editor-input {
+    width: 100%;
+    min-height: 150px;
+    padding: 8px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    text-align: left; /* Fix input starting position */
+  }
+  .editor-input a {
+    color: #007bff !important;
+    text-decoration: underline !important;
+  }
+  ul, ol {
+    margin-top: 12px !important;
+  }
+    

@@ -1,0 +1,40 @@
+.toolbar {
+    display: flex;
+    gap: 10px;
+    background: #f8f8f8;
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  
+  .toolbar button {
+    background: none;
+    color: blue;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    font-size: 18px;
+    transition: all 0.2s ease;
+  }
+  
+  .toolbar button:hover {
+    background: #ddd;
+    border-radius: 4px;
+  }
+  
+  .toolbar button.active {
+    background: #007bff;
+    color: white;
+    border-radius: 4px;
+  }
+  
+  .link-input {
+    width: 150px;
+    padding: 4px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
