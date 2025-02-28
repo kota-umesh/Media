@@ -92,7 +92,7 @@ app.get("/auth/facebook/callback", passport.authenticate("facebook", { session: 
   const user = users[req.user.id];
   if (user) {
     const token = jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "3h" });
-    return res.redirect(`https://jade-boba-4e902d.netlify.app/dashboard?token=${token}`);
+    return res.redirect(`https://localhost:3000/dashboard?token=${token}`);
   }
   res.status(401).json({ message: "Facebook authentication failed" });
 });
