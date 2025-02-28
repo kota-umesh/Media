@@ -76,11 +76,14 @@ const authenticateToken = (req, res, next) => {
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body;
   if (email === "admin" && password === "123") {
-    const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "2h" });
-    return res.json({ token, expiresIn: 7200 });
+    const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "1h" });
+    return res.json({ token, expiresIn: 3600 });
   }
   res.status(401).json({ message: "Invalid credentials" });
 });
+
+
+
 
 // ✅ Facebook Auth Routes
 app.get("/auth/facebook", passport.authenticate("facebook", { scope: ["public_profile", "email", "pages_manage_posts", "pages_show_list"] }));
@@ -88,8 +91,8 @@ app.get("/auth/facebook", passport.authenticate("facebook", { scope: ["public_pr
 app.get("/auth/facebook/callback", passport.authenticate("facebook", { session: false }), (req, res) => {
   const user = users[req.user.id];
   if (user) {
-    const token = jwt.sign({ id: user.id, name: user.name, accessToken: user.accessToken }, JWT_SECRET, { expiresIn: "24h" });
-    return res.redirect(`https://67bf69331be4711745a55b27--jade-boba-4e902d.netlify.app/dashboard?token=${token}`);
+    const token = jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "2h" });
+    return res.redirect(`https://localhost:3000/dashboard?token=${token}`);
   }
   res.status(401).json({ message: "Facebook authentication failed" });
 });
