@@ -91,7 +91,7 @@ app.get("/auth/facebook", passport.authenticate("facebook", { scope: ["public_pr
 app.get("/auth/facebook/callback", passport.authenticate("facebook", { session: false }), (req, res) => {
   const user = users[req.user.id];
   if (user) {
-    const token = jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "2h" });
+    const token = jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "3h" });
     return res.redirect(`https://localhost:3000/dashboard?token=${token}`);
   }
   res.status(401).json({ message: "Facebook authentication failed" });
@@ -140,3 +140,4 @@ app.post("/api/facebook/post", authenticateToken, async (req, res) => {
 // ✅ Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
