@@ -16,8 +16,18 @@ app.use(cors({ origin: frontendURL, credentials: true }));
 app.use(cookieParser());
 
 app.use(
-  session({ secret: "super_secret", resave: false, saveUninitialized: true })
+  session({
+    secret: "super_secret",
+    resave: false,
+    saveUninitialized: false, // ✅ Prevents empty sessions
+    cookie: {
+      httpOnly: true,
+      secure: true, // ✅ Required for HTTPS
+      sameSite: "None", // ✅ Allows cross-origin requests
+    },
+  })
 );
+
 app.use(passport.initialize());
 app.use(passport.session());
 
