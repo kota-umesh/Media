@@ -33,6 +33,12 @@ redisClient.on("error", (err) => console.error("❌ Redis Error:", err));
 redisClient.on("connect", () => console.log("✅ Connected to Redis Cloud"));
 
 
+redisClient.keys("*", (err, keys) => {
+  if (err) console.error("❌ Redis Error:", err);
+  else console.log("🔑 Stored Sessions in Redis:", keys);
+});
+
+
 app.use(
   session({
     store: new RedisStore({ client: redisClient }),
@@ -46,6 +52,11 @@ app.use(
     },
   })
 );
+
+app.use((req, res, next) => {
+  console.log("🔍 Session Data Before Passport:", req.session);
+  next();
+});
 
 app.use((req, res, next) => {
   console.log("🔍 Session Data:", req.session);

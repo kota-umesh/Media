@@ -53,7 +53,11 @@ passport.use(
 );
 
 passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) => done(null, {id}));
+passport.deserializeUser((id, done) => {
+  console.log("🔍 Deserializing User ID:", id);
+  done(null, { id });
+});
+
 
 // ✅ Step 3: Facebook Authentication - Redirects to Facebook Login
 exports.authFacebook = passport.authenticate("facebook", { 
