@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const FormData = require("form-data");
 
-const users = {}; // Temporary in-memory storage (Use DB in production)
+//const users = {}; // Temporary in-memory storage (Use DB in production)
 
 const frontEndURL = process.env.FRONTEND_URL || "https://67c9335d797640c797593fee--thunderous-rolypoly-244b38.netlify.app";
 
@@ -31,14 +31,19 @@ passport.use(
         }));
 
         // ✅ Step 2: Store User Data in Memory (Replace with DB in Production)
-        users[profile.id] = { 
-          id: profile.id, 
-          name: profile.displayName, 
-          accessToken, 
-          pages 
-        };
+        // users[profile.id] = { 
+        //   id: profile.id, 
+        //   name: profile.displayName, 
+        //   accessToken, 
+        //   pages 
+        // };
+        //return done(null, users[profile.id]);
 
-        return done(null, users[profile.id]);
+        // now we are using redis session 
+        const user = { id: profile.id, name: profile.displayName, accessToken, pages };
+        return done(null, user);
+
+
       } catch (error) {
         console.error("Error fetching pages:", error.response?.data || error.message);
         return done(error);
@@ -48,7 +53,7 @@ passport.use(
 );
 
 passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) => done(null, users[id]));
+passport.deserializeUser((id, done) => done(null, {id}));
 
 // ✅ Step 3: Facebook Authentication - Redirects to Facebook Login
 exports.authFacebook = passport.authenticate("facebook", { 
@@ -101,9 +106,13 @@ exports.facebookCallback = (req, res, next) => {
 
 exports.logoutFacebook = (req, res) => {
   try {
-    req.logout(() => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("❌ Error destroying session:", err);
+        return res.status(500).json({ error: "Failed to log out" });
+      }
+      res.clearCookie("connect.sid");
       console.log("✅ User logged out from Facebook");
-      res.clearCookie("connect.sid"); // Clear session cookie
       res.json({ message: "Logged out successfully" });
     });
   } catch (error) {
@@ -112,9 +121,10 @@ exports.logoutFacebook = (req, res) => {
   }
 };
 
+
 // ✅ Step 5: Get Facebook Pages with Page Access Tokens
 exports.getPages = async (req, res) => {
-  const user = users[req.user?.id];
+  const user = req.session.user;
   if (!user) {
     console.error("❌ User not found in memory!");
     return res.status(401).json({ error: "Unauthorized" });
@@ -144,7 +154,7 @@ const SUPPORTED_VIDEO_FORMATS = ["video/mp4", "video/quicktime"];
 exports.postToPage = async (req, res) => {
   try {
     const { pageId, message } = req.body;
-    const user = users[req.user?.id];
+    const user = req.session.user;
 
     if (!user) return res.status(401).json({ error: "Unauthorized" });
 
