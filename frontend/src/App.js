@@ -10,7 +10,7 @@ axios.defaults.withCredentials = true;
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
-  const backendURL = process.env.BACKEND_URL || "http://localhost:5000";
+  const backendURL = process.env.BACKEND_URL || "https://media-6zl6.onrender.com";
 
   useEffect(() => {
     const checkAuth = async () => {

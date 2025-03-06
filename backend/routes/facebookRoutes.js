@@ -36,7 +36,7 @@ const upload = multer({
   }
 }); // Store files temporarily in "uploads/"
 
-const backendURL = process.env.BACKEND_URL || "http://localhost:5000";
+const backendURL = process.env.BACKEND_URL || "https://media-6zl6.onrender.com";
 
 // ✅ Return the Facebook authentication URL (Frontend will use this)
 router.get("/auth-url", (req, res) => {

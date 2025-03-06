@@ -8,7 +8,7 @@ const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/authRoutes");
 const facebookRoutes = require("./routes/facebookRoutes");
 
-const frontendURL = process.env.FRONTEND_URL || "http://localhost:3000";
+const frontendURL = process.env.FRONTEND_URL || "https://67c9335d797640c797593fee--thunderous-rolypoly-244b38.netlify.app";
 
 const app = express();
 app.use(express.json());

@@ -7,7 +7,7 @@ const FormData = require("form-data");
 
 const users = {}; // Temporary in-memory storage (Use DB in production)
 
-const frontEndURL = process.env.FRONTEND_URL || "http://localhost:3000";
+const frontEndURL = process.env.FRONTEND_URL || "https://67c9335d797640c797593fee--thunderous-rolypoly-244b38.netlify.app";
 
 passport.use(
   new FacebookStrategy(
