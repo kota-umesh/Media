@@ -1,9 +1,13 @@
 require("dotenv").config();
+const {RedisStore} = require("connect-redis")
+const Redis = require("ioredis");
+
 const express = require("express");
 const session = require("express-session");
 const passport = require("passport");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+
 
 const authRoutes = require("./routes/authRoutes");
 const facebookRoutes = require("./routes/facebookRoutes");
@@ -15,8 +19,23 @@ app.use(express.json());
 app.use(cors({ origin: frontendURL, credentials: true }));
 app.use(cookieParser());
 
+
+// 🔗 Connect to Redis Cloud
+const redisClient = new Redis({
+  host: "redis-13906.crce182.ap-south-1-1.ec2.redns.redis-cloud.com",
+  port: 13906,
+  password: process.env.REDIS_PASS, // 🔑 Replace with actual password
+ 
+});
+
+// Handle Redis Connection Events
+redisClient.on("error", (err) => console.error("❌ Redis Error:", err));
+redisClient.on("connect", () => console.log("✅ Connected to Redis Cloud"));
+
+
 app.use(
   session({
+    store: new RedisStore({ client: redisClient }),
     secret: "super_secret",
     resave: false,
     saveUninitialized: false, // ✅ Prevents empty sessions
