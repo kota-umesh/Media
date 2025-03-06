@@ -124,6 +124,7 @@ exports.logoutFacebook = (req, res) => {
 
 // ✅ Step 5: Get Facebook Pages with Page Access Tokens
 exports.getPages = async (req, res) => {
+  console.log("🔍 Session on /facebook/pages:", req.session);
   const user = req.session.user;
   if (!user) {
     console.error("❌ User not found in memory!");
