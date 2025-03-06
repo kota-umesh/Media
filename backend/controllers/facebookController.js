@@ -63,20 +63,41 @@ exports.authFacebook = passport.authenticate("facebook", {
 
 
 // ✅ Step 4: Facebook Callback - Handles Success/Failure & Redirects
+// exports.facebookCallback = (req, res, next) => {
+//   passport.authenticate("facebook", (err, user) => {
+//     if (err || !user) {
+//       return res.redirect(`${frontEndURL}/dashboard`); // ❌ Stay on dashboard if login fails
+//     }
+    
+//     req.login(user, (loginErr) => {
+//       if (loginErr) {
+//         return res.redirect(`${frontEndURL}/dashboard`);
+//       }
+//       return res.redirect(`${frontEndURL}/facebook-post`); // ✅ Go to Facebook Post page after login
+//     });
+//   })(req, res, next);
+// };
+
 exports.facebookCallback = (req, res, next) => {
   passport.authenticate("facebook", (err, user) => {
     if (err || !user) {
-      return res.redirect(`${frontEndURL}/dashboard`); // ❌ Stay on dashboard if login fails
+      return res.redirect(`${frontEndURL}/dashboard`); // ❌ Redirect if login fails
     }
-    
+
     req.login(user, (loginErr) => {
       if (loginErr) {
         return res.redirect(`${frontEndURL}/dashboard`);
       }
-      return res.redirect(`${frontEndURL}/facebook-post`); // ✅ Go to Facebook Post page after login
+
+      // ✅ Ensure session is saved before redirecting
+      req.session.save(() => {
+        console.log("✅ Session saved, redirecting to Facebook Post page");
+        res.redirect(`${frontEndURL}/facebook-post`);
+      });
     });
   })(req, res, next);
 };
+
 
 exports.logoutFacebook = (req, res) => {
   try {
