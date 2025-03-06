@@ -7,7 +7,7 @@ exports.login = async (req, res) => {
 
   if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
     const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "1h" });
-    res.cookie("authToken", token, { httpOnly: true, sameSite: "Strict" }).json({ message: "Login successful" });
+    res.cookie("authToken", token, { httpOnly: true, secure:true, sameSite: "Strict" }).json({ message: "Login successful" });
   } else {
     res.status(401).json({ error: "Invalid credentials" });
   }
