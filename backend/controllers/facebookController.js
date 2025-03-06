@@ -81,7 +81,7 @@ exports.authFacebook = passport.authenticate("facebook", {
 exports.facebookCallback = (req, res, next) => {
   passport.authenticate("facebook", (err, user) => {
     if (err || !user) {
-      return res.redirect(`${frontEndURL}/dashboard`); // ❌ Redirect if login fails
+      return res.redirect(`${frontEndURL}/dashboard`);
     }
 
     req.login(user, (loginErr) => {
@@ -89,14 +89,14 @@ exports.facebookCallback = (req, res, next) => {
         return res.redirect(`${frontEndURL}/dashboard`);
       }
 
-      // ✅ Ensure session is saved before redirecting
-      req.session.save(() => {
-        console.log("✅ Session saved, redirecting to Facebook Post page");
-        res.redirect(`${frontEndURL}/facebook-post`);
-      });
+      // ✅ Store user ID in session
+      req.session.user = user;
+      
+      return res.redirect(`${frontEndURL}/facebook-post`);
     });
   })(req, res, next);
 };
+
 
 
 exports.logoutFacebook = (req, res) => {
