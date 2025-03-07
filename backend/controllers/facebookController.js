@@ -5,6 +5,14 @@ const fs = require("fs");
 const path = require("path");
 const FormData = require("form-data");
 
+
+const Redis = require("ioredis");
+const redisClient = new Redis({
+  host: "redis-13906.crce182.ap-south-1-1.ec2.redns.redis-cloud.com",
+  port: 13906,
+  password: process.env.REDIS_PASS,
+});
+
 //const users = {}; // Temporary in-memory storage (Use DB in production)
 
 const frontEndURL = process.env.FRONTEND_URL || "https://67c9335d797640c797593fee--thunderous-rolypoly-244b38.netlify.app";
@@ -52,10 +60,21 @@ passport.use(
   )
 );
 
-passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) => {
-  console.log("🔍 Deserializing User ID:", id);
-  done(null, { id });
+
+
+passport.serializeUser((user, done) => {done(null, user.id)});
+passport.deserializeUser(async (id, done) => {
+  try {
+    console.log("🔍 Deserializing User ID:", id);
+    const userData = await redisClient.get(`user:${id}`);
+    if (!userData) return done(null, false);
+
+    const user = JSON.parse(userData);
+    return done(null, user);
+  } catch (error) {
+    console.error("❌ Error retrieving user from Redis:", error);
+    return done(error);
+  }
 });
 
 

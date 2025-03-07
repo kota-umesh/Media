@@ -1,5 +1,5 @@
 require("dotenv").config();
-const {RedisStore} = require("connect-redis")
+const {RedisStore}= require("connect-redis");
 const Redis = require("ioredis");
 
 const express = require("express");
@@ -53,10 +53,7 @@ app.use(
   })
 );
 
-app.use((req, res, next) => {
-  console.log("🔍 Session Data Before Passport:", req.session);
-  next();
-});
+
 
 app.use((req, res, next) => {
   console.log("🔍 Session Data:", req.session);
@@ -66,6 +63,11 @@ app.use((req, res, next) => {
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+app.use((req, res, next) => {
+  console.log("🔍 Session Data Before Passport:", req.session);
+  next();
+});
 
 app.use("/auth", authRoutes);
 app.use("/facebook", facebookRoutes);
