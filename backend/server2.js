@@ -1,6 +1,6 @@
 require("dotenv").config();
 const {RedisStore}= require("connect-redis");
-const Redis = require("ioredis");
+const {createClient}  = require("redis");
 
 const express = require("express");
 const session = require("express-session");
@@ -21,12 +21,12 @@ app.use(cookieParser());
 
 
 // 🔗 Connect to Redis Cloud
-const redisClient = new Redis({
-  host: "redis-13906.crce182.ap-south-1-1.ec2.redns.redis-cloud.com",
-  port: 13906,
-  password: process.env.REDIS_PASS, // 🔑 Replace with actual password
- 
+const redisClient = createClient({
+  url: `redis://default:${process.env.REDIS_PASS}@redis-13906.crce182.ap-south-1-1.ec2.redns.redis-cloud.com:13906`,
+  legacyMode: true, // ✅ Required for `connect-redis`
 });
+
+redisClient.connect().catch(console.error);
 
 // Handle Redis Connection Events
 redisClient.on("error", (err) => console.error("❌ Redis Error:", err));

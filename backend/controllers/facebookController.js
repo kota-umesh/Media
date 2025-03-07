@@ -148,6 +148,7 @@ exports.logoutFacebook = (req, res) => {
 // ✅ Step 5: Get Facebook Pages with Page Access Tokens
 exports.getPages = async (req, res) => {
   console.log("🔍 Session on /facebook/pages:", req.session);
+  console.log("🔍 Stored User Data:", req.session.cookie);
   const user = req.session.user;
   if (!user) {
     console.error("❌ User not found in memory!");
@@ -164,13 +165,6 @@ exports.getPages = async (req, res) => {
   }
 };
 
-// const filePath = "uploads/2643a265555a497b4dbc7bd19120b459";
-
-// if (!fs.existsSync(filePath)) {
-//   console.error("❌ File not found:", filePath);
-// } else {
-//   console.log("✅ File exists:", filePath);
-// }
 
 // ✅ Supported video formats for Facebook
 const SUPPORTED_VIDEO_FORMATS = ["video/mp4", "video/quicktime"];
