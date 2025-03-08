@@ -1,19 +1,3 @@
-// const express = require("express");
-// const {
-//   authFacebook,
-//   facebookCallback,
-//   getPages,
-//   postToPage,
-// } = require("../controllers/facebookController");
-
-// const router = express.Router();
-// router.get("/auth-url", authFacebook);
-// router.get("/callback", facebookCallback);
-// router.get("/pages", getPages);
-// router.post("/post", postToPage);
-
-// module.exports = router;
-
 const express = require("express");
 const {
   authFacebook,
@@ -22,9 +6,8 @@ const {
   postToPage,
   logoutFacebook,
 } = require("../controllers/facebookController");
+const { verifyFbToken } = require("../middleware/verifyToken");
 const multer = require("multer");
-
-
 
 const router = express.Router();
 const upload = multer({
@@ -48,11 +31,11 @@ router.get("/auth", authFacebook);
 router.get("/callback", facebookCallback);
 
 // ✅ Fetch Connected Pages
-router.get("/pages", getPages);
+router.get("/pages", verifyFbToken, getPages);
 
 // ✅ Post to Facebook Page
-router.post("/post",  upload.array("media"), postToPage);
+router.post("/post", verifyFbToken,  upload.array("media"), postToPage);
 
-router.post("/logout", logoutFacebook);
+router.post("/logout", verifyFbToken, logoutFacebook);
 
 module.exports = router;

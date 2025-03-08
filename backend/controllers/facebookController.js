@@ -4,14 +4,9 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const FormData = require("form-data");
+const redisClient = require("../config/redisClient");
+const jwt = require("jsonwebtoken");
 
-
-const Redis = require("ioredis");
-const redisClient = new Redis({
-  host: "redis-13906.crce182.ap-south-1-1.ec2.redns.redis-cloud.com",
-  port: 13906,
-  password: process.env.REDIS_PASS,
-});
 
 //const users = {}; // Temporary in-memory storage (Use DB in production)
 
@@ -22,7 +17,7 @@ passport.use(
     {
       clientID: process.env.FACEBOOK_APP_ID,
       clientSecret: process.env.FACEBOOK_APP_SECRET,
-      callbackURL: "https://media-6zl6.onrender.com/facebook/callback",
+      callbackURL: "http://localhost:5000/facebook/callback",
       profileFields: ["id", "displayName", "email"],
     },
     async (accessToken, refreshToken, profile, done) => {
@@ -38,20 +33,11 @@ passport.use(
           access_token: page.access_token || null,
         }));
 
-        // ✅ Step 2: Store User Data in Memory (Replace with DB in Production)
-        // users[profile.id] = { 
-        //   id: profile.id, 
-        //   name: profile.displayName, 
-        //   accessToken, 
-        //   pages 
-        // };
-        //return done(null, users[profile.id]);
-
         // now we are using redis session 
         const user = { id: profile.id, name: profile.displayName, accessToken, pages };
+        await redisClient.set(`fbUser:${profile.id}`, JSON.stringify(user));
+        
         return done(null, user);
-
-
       } catch (error) {
         console.error("Error fetching pages:", error.response?.data || error.message);
         return done(error);
@@ -63,13 +49,21 @@ passport.use(
 
 
 passport.serializeUser((user, done) => {done(null, user.id)});
+
 passport.deserializeUser(async (id, done) => {
   try {
     console.log("🔍 Deserializing User ID:", id);
-    const userData = await redisClient.get(`user:${id}`);
-    if (!userData) return done(null, false);
+
+    // Fetch Facebook user data from Redis
+    const userData = await redisClient.get(`fbUser:${id}`);
+    if (!userData) {
+      console.log("❌ No user found in Redis");
+      return done(null, false);
+    }
 
     const user = JSON.parse(userData);
+    console.log("✅ Restored User from Redis:", user);
+
     return done(null, user);
   } catch (error) {
     console.error("❌ Error retrieving user from Redis:", error);
@@ -89,53 +83,46 @@ exports.authFacebook = passport.authenticate("facebook", {
 });
 
 
-
-// ✅ Step 4: Facebook Callback - Handles Success/Failure & Redirects
-// exports.facebookCallback = (req, res, next) => {
-//   passport.authenticate("facebook", (err, user) => {
-//     if (err || !user) {
-//       return res.redirect(`${frontEndURL}/dashboard`); // ❌ Stay on dashboard if login fails
-//     }
-    
-//     req.login(user, (loginErr) => {
-//       if (loginErr) {
-//         return res.redirect(`${frontEndURL}/dashboard`);
-//       }
-//       return res.redirect(`${frontEndURL}/facebook-post`); // ✅ Go to Facebook Post page after login
-//     });
-//   })(req, res, next);
-// };
-
 exports.facebookCallback = (req, res, next) => {
-  passport.authenticate("facebook", (err, user) => {
+  passport.authenticate("facebook", async (err, user) => {
     if (err || !user) {
       return res.redirect(`${frontEndURL}/dashboard`);
     }
 
-    req.login(user, (loginErr) => {
-      if (loginErr) {
-        return res.redirect(`${frontEndURL}/dashboard`);
+    try {
+      // ✅ Check if user already exists in Redis
+      const existingUser = await redisClient.get(`fbUser:${user.id}`);
+
+      if (!existingUser) {
+        // ✅ Only store if not already in Redis
+        await redisClient.set(`fbUser:${user.id}`, JSON.stringify(user));
       }
 
-      // ✅ Store user ID in session
-      req.session.user = user;
-      
-      return res.redirect(`${frontEndURL}/facebook-post`);
-    });
+      // ✅ Generate JWT token
+      const token = jwt.sign({ id: user.id, name: user.name }, process.env.JWT_TOKEN, {
+        expiresIn: "1h",
+      });
+
+      return res.redirect(`${frontEndURL}/facebook-post?token=${token}`);
+    } catch (error) {
+      console.error("❌ Error in Facebook callback:", error);
+      return res.redirect(`${frontEndURL}/dashboard`);
+    }
   })(req, res, next);
 };
 
 
 
-exports.logoutFacebook = (req, res) => {
+
+// ✅ Logout from Facebook
+exports.logoutFacebook = async (req, res) => {
   try {
-    req.session.destroy((err) => {
-      if (err) {
-        console.error("❌ Error destroying session:", err);
-        return res.status(500).json({ error: "Failed to log out" });
-      }
-      res.clearCookie("connect.sid");
-      console.log("✅ User logged out from Facebook");
+    const user = req.user;
+    if (user) {
+      await redisClient.del(`fbUser:${user.id}`);
+      console.log("✅ User removed from Redis");
+    }
+    req.logout(() => {
       res.json({ message: "Logged out successfully" });
     });
   } catch (error) {
@@ -144,21 +131,21 @@ exports.logoutFacebook = (req, res) => {
   }
 };
 
-
-// ✅ Step 5: Get Facebook Pages with Page Access Tokens
+// ✅ Get Facebook Pages with Page Access Tokens
 exports.getPages = async (req, res) => {
-  console.log("🔍 Session on /facebook/pages:", req.session);
-  console.log("🔍 Stored User Data:", req.session.cookie);
-  const user = req.session.user;
-  if (!user) {
-    console.error("❌ User not found in memory!");
+  const userId = req.user.id; // ✅ Extracted from JWT
+
+  if (!userId) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  console.log("✅ Retrieved User Data:", user);
-  console.log("✅ Stored Pages:", user.pages);
-
   try {
+    const userData = await redisClient.get(`fbUser:${userId}`);
+    if (!userData) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = JSON.parse(userData);
     res.json({ pages: user.pages });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -167,15 +154,17 @@ exports.getPages = async (req, res) => {
 
 
 // ✅ Supported video formats for Facebook
-const SUPPORTED_VIDEO_FORMATS = ["video/mp4", "video/quicktime"];
 
 exports.postToPage = async (req, res) => {
   try {
     const { pageId, message } = req.body;
-    const user = req.session.user;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    const userData = await redisClient.get(`fbUser:${userId}`);
+    if (!userData) return res.status(401).json({ error: "Unauthorized" });
 
+    const user = JSON.parse(userData);
     const page = user.pages.find((p) => p.id === pageId);
     if (!page || !page.access_token) {
       return res.status(400).json({ error: "Invalid page ID or missing access token" });
@@ -184,7 +173,7 @@ exports.postToPage = async (req, res) => {
     let uploadedMediaIds = [];
     let videoFile = null;
 
-    // ✅ Log Incoming Files
+    // ✅ Process uploaded files
     if (req.files && req.files.length > 0) {
       for (let file of req.files) {
         console.log(`📂 Incoming File: ${file.originalname}, MIME Type: ${file.mimetype}`);
@@ -201,13 +190,13 @@ exports.postToPage = async (req, res) => {
         let url = "";
         if (file.mimetype.startsWith("image/")) {
           url = `https://graph.facebook.com/${pageId}/photos`;
-          formData.append("published", "false"); // ✅ Unpublished media
+          formData.append("published", "false");
         } else if (file.mimetype.startsWith("video/")) {
           if (!SUPPORTED_VIDEO_FORMATS.includes(file.mimetype)) {
             console.warn(`🚫 Unsupported video format: ${file.mimetype}`);
             continue;
           }
-          videoFile = file; // ✅ Store video for separate processing
+          videoFile = file;
           continue;
         } else {
           console.warn(`🚫 Unsupported file type: ${file.mimetype}`);
@@ -219,24 +208,20 @@ exports.postToPage = async (req, res) => {
           const uploadRes = await axios.post(url, formData, { headers: formData.getHeaders() });
 
           if (file.mimetype.startsWith("image/")) {
-            uploadedMediaIds.push({ media_fbid: uploadRes.data.id }); // ✅ Store image ID
+            uploadedMediaIds.push({ media_fbid: uploadRes.data.id });
           }
         } catch (err) {
           console.error(`❌ Error uploading ${file.originalname}:`, err.response?.data || err.message);
         }
 
-        fs.unlinkSync(file.path); // ✅ Cleanup uploaded files
+        fs.unlinkSync(file.path);
       }
     }
 
-    // ✅ Step 1: Post Text & Images (If Any)
-    let postData = {
-      message,
-      access_token: page.access_token,
-    };
-
+    // ✅ Post Text & Images
+    let postData = { message, access_token: page.access_token };
     if (uploadedMediaIds.length > 0) {
-      postData.attached_media = uploadedMediaIds; // ✅ Attach all images
+      postData.attached_media = uploadedMediaIds;
     }
 
     let postResponse = null;
@@ -244,71 +229,9 @@ exports.postToPage = async (req, res) => {
       postResponse = await axios.post(`https://graph.facebook.com/${pageId}/feed`, postData);
     }
 
-    // ✅ Step 2: Upload and Post Video Separately (If Any)
-    let videoPostId = null;
-    if (videoFile) {
-      console.log(`📂 Video File Details: ${JSON.stringify({
-        originalName: videoFile.originalname,
-        path: videoFile.path,
-        mimetype: videoFile.mimetype,
-        size: videoFile.size,
-      }, null, 2)}`);
-
-      if (!fs.existsSync(videoFile.path)) {
-        console.error(`❌ Video file not found: ${videoFile.path}`);
-        return res.status(400).json({ error: "Video file not found" });
-      }
-
-      const videoForm = new FormData();
-      videoForm.append("access_token", page.access_token);
-      videoForm.append("source", fs.createReadStream(videoFile.path));
-      videoForm.append("description", message || "Uploaded via API");
-
-      try {
-        console.log(`📂 Uploading video: ${videoFile.originalname}`);
-        const videoUploadRes = await axios.post(`https://graph.facebook.com/${pageId}/videos`, videoForm, {
-          headers: videoForm.getHeaders(),
-        });
-
-        const videoId = videoUploadRes.data.id;
-        console.log("📹 Video uploaded, waiting for processing...");
-
-        // ✅ Wait for Video Processing
-        let attempts = 10;
-        while (attempts > 0) {
-          try {
-            const statusRes = await axios.get(`https://graph.facebook.com/${videoId}?fields=status&access_token=${page.access_token}`);
-            const status = statusRes.data.status?.video_status;
-
-            if (status === "ready") {
-              console.log("✅ Video processed successfully!");
-              videoPostId = videoId;
-              break;
-            } else {
-              console.log(`⏳ Video still processing... (${attempts} attempts left)`);
-              await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 sec
-            }
-          } catch (statusError) {
-            console.error("❌ Error checking video status:", statusError.response?.data || statusError.message);
-            break;
-          }
-          attempts--;
-        }
-
-        if (attempts === 0) {
-          console.warn("⚠️ Video processing timeout, video may not be available yet.");
-        }
-      } catch (videoErr) {
-        console.error("❌ Error uploading video:", videoErr.response?.data || videoErr.message);
-      }
-
-      fs.unlinkSync(videoFile.path); // ✅ Cleanup video file
-    }
-
     return res.status(200).json({
       success: true,
       postId: postResponse?.data?.id || null,
-      videoPostId: videoPostId || null,
     });
 
   } catch (error) {

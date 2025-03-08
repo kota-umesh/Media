@@ -14,68 +14,108 @@ const FacebookPost = () => {
   const [mediaFiles, setMediaFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  const backendURL = process.env.BACKEND_URL || "https://media-6zl6.onrender.com";
+  // const [isTokenSet, setIsTokenSet] = useState(false);
+  const backendURL = process.env.BACKEND_URL || "http://localhost:5000";
+  const [fbToken, setFbToken] = useState(null);
 
   useEffect(() => {
-    axios.get(`${backendURL}/facebook/pages`, { withCredentials: true })
-      .then(res => {
+    let urlParams = new URLSearchParams(window.location.search);
+    let tokenFromUrl = urlParams.get("token");
+
+    if (tokenFromUrl) {
+      console.log("📌 FacebookPost Loaded. URL Token:", tokenFromUrl);
+      localStorage.setItem("fbToken", tokenFromUrl);
+      setFbToken(tokenFromUrl);
+
+      // Use a small delay before navigating to avoid losing the token
+      setTimeout(() => {
+        console.log("🔄 Navigating to clean URL...");
+        navigate("/facebook-post", { replace: true });
+      }, 500);
+    } else {
+      // Try to get token from localStorage if it's not in the URL
+      let tokenFromStorage = localStorage.getItem("fbToken");
+      console.log("📌 FacebookPost Loaded. LocalStorage Token:", tokenFromStorage);
+
+      if (tokenFromStorage) {
+        setFbToken(tokenFromStorage);
+      } else {
+        console.log("⚠️ No token found in URL or localStorage.");
+      }
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("fbToken");
+    if (!token) {
+      message.error("Authentication failed. Please log in again.");
+      navigate("/dashboard");
+      return;
+    }
+
+    axios
+      .get(`${backendURL}/facebook/pages`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
         console.log("Facebook Pages:", res.data);
         setPages(res.data.pages || []);
       })
       .catch(() => message.error("Failed to fetch pages"));
-  }, [backendURL]);
+  }, [backendURL, navigate]);
 
   const handleUpload = ({ fileList }) => {
-    const validFiles = fileList.filter(file => file.type.startsWith("image/") || file.type.startsWith("video/"));
-  
+    const validFiles = fileList.filter(
+      (file) => file.type.startsWith("image/") || file.type.startsWith("video/")
+    );
+
     if (validFiles.length > 5) {
       message.error("You can upload a maximum of 5 files.");
       return;
     }
-  
+
     setMediaFiles(validFiles);
   };
-  
-  
 
   const handlePost = async () => {
     if (!selectedPage) {
       message.error("Please select a page");
       return;
     }
-  
+
     if (!postMessage.trim() && mediaFiles.length === 0) {
       message.error("Please enter a message or upload media");
       return;
     }
-  
+
+    const token = localStorage.getItem("fbToken");
+    if (!token) {
+      message.error("Authentication expired. Please log in again.");
+      navigate("/dashboard");
+      return;
+    }
+
     setLoading(true);
     const formData = new FormData();
     formData.append("pageId", selectedPage);
-    formData.append("message", postMessage.trim()); // Trim to avoid empty spaces
-  
+    formData.append("message", postMessage.trim());
+
     // Append media files
-    mediaFiles.forEach((file, index) => {
-      //console.log(`📂 Appending file ${index + 1}:`, file);
-      formData.append("media", file.originFileObj); 
+    mediaFiles.forEach((file) => {
+      formData.append("media", file.originFileObj);
     });
-  
-    // Debugging FormData
-    console.log("🔹 Sending FormData:");
-    for (let pair of formData.entries()) {
-      console.log(pair[0], pair[1]); // ✅ Log FormData key-value pairs
-    }
-  
+
     try {
       const response = await axios.post(`${backendURL}/facebook/post`, formData, {
-        withCredentials: true, 
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
-  
+
       console.log("✅ Response:", response.data);
       message.success("Posted successfully!");
-  
+
       // Reset form fields
       setPostMessage("");
       setMediaFiles([]);
@@ -83,26 +123,15 @@ const FacebookPost = () => {
       console.error("❌ Posting error:", error.response?.data || error.message);
       message.error(error.response?.data?.error || "Failed to post");
     }
-  
-    setLoading(false);
-  };
-  
-  
 
-  const handleLogout = async () => {
-    setLoading(true);
-    try {
-      await axios.post(`${backendURL}/facebook/logout`, {}, { withCredentials: true });
-      message.success("Logged out from Facebook");
-      navigate("/dashboard");
-    } catch (error) {
-      console.error("Logout error:", error);
-      message.error(error.response?.data?.message || "Failed to log out");
-    }
     setLoading(false);
   };
 
-  const validPages = pages.filter(page => page.id != null && page.name != null);
+  const handleLogout = () => {
+    localStorage.removeItem("fbToken");
+    message.success("Logged out successfully");
+    navigate("/dashboard");
+  };
 
   return (
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
@@ -112,11 +141,13 @@ const FacebookPost = () => {
             placeholder="Select Facebook Page"
             style={{ width: "100%", marginBottom: "10px" }}
             onChange={(value) => setSelectedPage(value)}
-            value={selectedPage}
+            value={selectedPage || null}
           >
-            {validPages.length > 0 ? (
-              validPages.map((page) => (
-                <Option key={page.id} value={page.id}>{page.name}</Option>
+            {pages.length > 0 ? (
+              pages.map((page) => (
+                <Option key={page.id} value={page.id}>
+                  {page.name}
+                </Option>
               ))
             ) : (
               <Option disabled>No pages available</Option>
@@ -131,34 +162,15 @@ const FacebookPost = () => {
             style={{ marginBottom: "10px" }}
           />
 
-          <Upload
-            multiple
-            beforeUpload={() => false}
-            onChange={handleUpload}
-            fileList={mediaFiles}
-            showUploadList
-          >
+          <Upload multiple beforeUpload={() => false} onChange={handleUpload} fileList={mediaFiles} showUploadList>
             <Button icon={<UploadOutlined />}>Upload Images/Videos</Button>
           </Upload>
 
-          <Button
-            type="primary"
-            icon={<FacebookOutlined />}
-            block
-            onClick={handlePost}
-            style={{ marginTop: "10px" }}
-          >
+          <Button type="primary" icon={<FacebookOutlined />} block onClick={handlePost} style={{ marginTop: "10px" }}>
             Post to Facebook
           </Button>
 
-          <Button
-            type="default"
-            icon={<LogoutOutlined />}
-            danger
-            block
-            onClick={handleLogout}
-            style={{ marginTop: "10px" }}
-          >
+          <Button type="default" icon={<LogoutOutlined />} danger block onClick={handleLogout} style={{ marginTop: "10px" }}>
             Logout from Facebook
           </Button>
         </Card>
@@ -168,4 +180,3 @@ const FacebookPost = () => {
 };
 
 export default FacebookPost;
-

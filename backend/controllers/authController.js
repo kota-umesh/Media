@@ -14,15 +14,28 @@ exports.login = async (req, res) => {
 };
 
 exports.checkAuth = (req, res) => {
-  const token = req.cookies.authToken;
-  if (!token) return res.json({ authenticated: false });
+  const authToken = req.cookies.authToken; // App login token
+  const fbToken = req.headers["authorization"]; // Facebook token from frontend request
 
-  try {
-    jwt.verify(token, JWT_SECRET);
-    res.json({ authenticated: true });
-  } catch {
-    res.json({ authenticated: false });
+  if (authToken) {
+    try {
+      jwt.verify(authToken, JWT_SECRET);
+      return res.json({ authenticated: true });
+    } catch (err) {
+      console.log("❌ Invalid app login token:", err.message);
+    }
   }
+
+  if (fbToken) {
+    try {
+      jwt.verify(fbToken, JWT_SECRET);
+      return res.json({ authenticated: true });
+    } catch (err) {
+      console.log("❌ Invalid Facebook token:", err.message);
+    }
+  }
+
+  return res.json({ authenticated: false });
 };
 
 exports.logout = (req, res) => {

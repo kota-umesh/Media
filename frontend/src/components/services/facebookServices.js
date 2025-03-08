@@ -1,7 +1,7 @@
 import axios from "axios";
 import { message } from "antd";
 
-const backendURL = process.env.BACKEND_URL || "https://media-6zl6.onrender.com";
+const backendURL = process.env.BACKEND_URL || "http://localhost:5000";
 
 export const connectFacebook = async () => {
   try {

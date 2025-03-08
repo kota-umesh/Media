@@ -10,17 +10,26 @@ axios.defaults.withCredentials = true;
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
-  const backendURL = process.env.BACKEND_URL || "https://media-6zl6.onrender.com";
+  const backendURL = process.env.BACKEND_URL 
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await axios.get(`${backendURL}/auth/check-auth`);
+        const fbToken = localStorage.getItem("fbToken");
+        console.log("📡 Sending Facebook token in request:", fbToken);
+    
+        const res = await axios.get("http://localhost:5000/auth/check-auth", {
+          headers: fbToken ? { Authorization: `Bearer ${fbToken}` } : {},
+        });
+    
+        console.log("✅ Auth check response:", res.data); // Log response
         setIsAuthenticated(res.data.authenticated);
-      } catch {
+      } catch (err) {
+        console.error("❌ Auth check failed:", err);
         setIsAuthenticated(false);
       }
     };
+    
 
     checkAuth();
   }, [backendURL]);
@@ -40,6 +49,7 @@ const App = () => {
 
 // Protects routes from unauthorized access
 const ProtectedRoute = ({ children, isAuthenticated }) => {
+  console.log("🔒 ProtectedRoute - isAuthenticated:", isAuthenticated);
   return isAuthenticated ? children : <Navigate to="/" />;
 };
 
