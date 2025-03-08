@@ -10,7 +10,7 @@ axios.defaults.withCredentials = true;
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
-  const backendURL = process.env.BACKEND_URL 
+  const backendURL = process.env.BACKEND_URL || "http://localhost:5000"
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -18,7 +18,7 @@ const App = () => {
         const fbToken = localStorage.getItem("fbToken");
         console.log("📡 Sending Facebook token in request:", fbToken);
     
-        const res = await axios.get("http://localhost:5000/auth/check-auth", {
+        const res = await axios.get(`${backendURL}/auth/check-auth`, {
           headers: fbToken ? { Authorization: `Bearer ${fbToken}` } : {},
         });
     
