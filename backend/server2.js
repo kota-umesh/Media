@@ -12,7 +12,7 @@ const redisClient = require("./config/redisClient");
 const authRoutes = require("./routes/authRoutes");
 const facebookRoutes = require("./routes/facebookRoutes");
 
-const frontendURL = process.env.FRONTEND_URL || "https://67c9335d797640c797593fee--thunderous-rolypoly-244b38.netlify.app";
+const frontendURL = process.env.FRONTEND_URL || "https://thunderous-rolypoly-244b38.netlify.app";
 
 const app = express();
 app.use(express.json());

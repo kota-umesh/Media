@@ -15,7 +15,7 @@ const FacebookPost = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   // const [isTokenSet, setIsTokenSet] = useState(false);
-  const backendURL = process.env.BACKEND_URL || "http://localhost:5000";
+  const backendURL = process.env.REACT_APP_BACKEND_URL || "https://media-6zl6.onrender.com";
   const [fbToken, setFbToken] = useState(null);
 
   useEffect(() => {
