@@ -11,13 +11,14 @@ const jwt = require("jsonwebtoken");
 //const users = {}; // Temporary in-memory storage (Use DB in production)
 
 const frontEndURL = process.env.FRONTEND_URL || "https://thunderous-rolypoly-244b38.netlify.app";
+const backendURL = process.env.BACKEND_URL || "https://media-6zl6.onrender.com";
 
 passport.use(
   new FacebookStrategy(
     {
       clientID: process.env.FACEBOOK_APP_ID,
       clientSecret: process.env.FACEBOOK_APP_SECRET,
-      callbackURL: process.env.BACKEND_URL/facebook/callback,
+      callbackURL: `${backendURL}/facebook/callback`,
       profileFields: ["id", "displayName", "email"],
     },
     async (accessToken, refreshToken, profile, done) => {
